@@ -23,8 +23,8 @@ function ThankYouPage() {
 
     // Google Ads gtag conversion — IDs configurados via site_settings no Supabase
     if (typeof window !== "undefined" && window.gtag) {
-      const adsId = (window as Record<string, unknown>).__GADS_ID__ as string | undefined;
-      const adsLabel = (window as Record<string, unknown>).__GADS_LABEL__ as string | undefined;
+      const adsId = (window as any).__GADS_ID__ as string | undefined;
+      const adsLabel = (window as any).__GADS_LABEL__ as string | undefined;
       if (adsId && adsLabel) {
         window.gtag("event", "conversion", {
           send_to: `${adsId}/${adsLabel}`,
@@ -112,3 +112,4 @@ function ThankYouPage() {
 }
 
 export default ThankYouPage;
+
