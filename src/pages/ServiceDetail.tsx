@@ -105,7 +105,7 @@ function ServiceDetail() {
           { name: "Serviços", url: "/servicos" },
           { name: service.title, url: `/servicos/${slug}` },
         ]),
-        serviceSchema({ name: service.title, description: service.longDesc, slug }),
+        serviceSchema({ name: service.title, description: service.longDesc, slug: slug ?? "" }),
         faqSchema(service.faq),
       ]} />
 
@@ -191,3 +191,4 @@ function ServiceDetail() {
 }
 
 export default ServiceDetail;
+
