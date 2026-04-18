@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin, Clock, Zap, Instagram, Facebook, ShieldCheck, Award, MessageCircle } from "lucide-react";
 import { SITE_CONFIG } from "@/lib/site-config";
 import { trackPhone, trackWhatsApp } from "@/lib/analytics";
@@ -91,8 +91,8 @@ export function Footer() {
               {SITE_CONFIG.services.map((s) => (
                 <li key={s.slug}>
                   <Link
-                    to="/servicos/$slug"
-                    params={{ slug: s.slug }}
+                    
+                    to={`/servicos/${s.slug}`}
                     className="transition-colors hover:text-primary"
                   >
                     {s.title}

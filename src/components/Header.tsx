@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Menu, X, Phone, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,18 +56,20 @@ export function Header() {
           {/* Nav desktop */}
           <nav className="hidden md:flex md:items-center md:gap-0.5">
             {NAV.map((item) => (
-              <Link
+              <NavLink
                 key={item.to}
                 to={item.to}
-                className="relative rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
-                activeProps={{
-                  className:
-                    "text-foreground bg-primary/6 after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-gradient-energy",
-                }}
-                activeOptions={{ exact: item.to === "/" }}
+                end={item.to === "/"}
+                className={({ isActive }) =>
+                  `relative rounded-lg px-3.5 py-2 text-sm font-medium transition-colors hover:bg-accent/60 hover:text-foreground ${
+                    isActive
+                      ? "text-foreground bg-primary/6 after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-gradient-energy"
+                      : "text-muted-foreground"
+                  }`
+                }
               >
                 {item.label}
-              </Link>
+              </NavLink>
             ))}
           </nav>
 
@@ -86,10 +88,7 @@ export function Header() {
               size="sm"
               className="btn-shimmer bg-gradient-energy font-semibold text-energy-foreground shadow-energy transition-all duration-300 hover:scale-[1.04] hover:shadow-cta"
             >
-              <Link
-                to="/orcamento"
-                onClick={() => trackCTA("orcamento", "header")}
-              >
+              <Link to="/orcamento" onClick={() => trackCTA("orcamento", "header")}>
                 Orçamento Grátis
               </Link>
             </Button>
@@ -123,10 +122,7 @@ export function Header() {
               <a
                 href={`tel:${SITE_CONFIG.contact.phoneE164}`}
                 className="mt-1.5 inline-flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-foreground hover:bg-accent"
-                onClick={() => {
-                  trackPhone("header_mobile");
-                  setOpen(false);
-                }}
+                onClick={() => { trackPhone("header_mobile"); setOpen(false); }}
               >
                 <Phone className="h-4 w-4 text-primary" />
                 {SITE_CONFIG.contact.phone}

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /obrigado
+Disallow: /admin
+Disallow: /admin/
+
+Sitemap: https://mastereletrica.com.br/sitemap.xml

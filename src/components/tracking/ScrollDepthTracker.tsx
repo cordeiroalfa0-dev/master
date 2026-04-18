@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "@tanstack/react-router";
+import { useLocation } from "react-router-dom";
 import { trackEvent } from "@/lib/analytics";
 
 const THRESHOLDS = [25, 50, 75, 100] as const;

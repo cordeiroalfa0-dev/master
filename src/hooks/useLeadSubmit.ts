@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getUTMData } from "@/hooks/useUTMTracking";
 import { trackLead } from "@/lib/analytics";
@@ -65,7 +65,7 @@ export function useLeadSubmit({ source = "form", redirectOnSuccess = true, onSuc
     onSuccess?.();
 
     if (redirectOnSuccess) {
-      navigate({ to: "/obrigado" });
+      navigate("/obrigado");
     }
 
     return true;

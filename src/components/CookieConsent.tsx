@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
 import { Cookie, X } from "lucide-react";
 
 export function CookieConsent() {
