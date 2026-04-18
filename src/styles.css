@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -60,7 +61,6 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.11 0.045 255);
 
-  /* Azul elétrico profundo — ligeiramente mais vibrante */
   --primary: oklch(0.36 0.22 258);
   --primary-foreground: oklch(0.99 0 0);
   --primary-glow: oklch(0.56 0.24 254);
@@ -72,7 +72,6 @@
   --accent: oklch(0.93 0.022 254);
   --accent-foreground: oklch(0.18 0.05 254);
 
-  /* Âmbar quente — mais saturado e contrastante */
   --energy: oklch(0.80 0.20 66);
   --energy-foreground: oklch(0.10 0.04 250);
 
@@ -85,7 +84,6 @@
   --input:  oklch(0.89 0.016 252);
   --ring:   oklch(0.36 0.22 258);
 
-  /* Gradientes — mais ricos e profundos */
   --gradient-hero: linear-gradient(135deg,
     oklch(0.09 0.055 258) 0%,
     oklch(0.15 0.11 256) 45%,
@@ -99,7 +97,6 @@
     radial-gradient(at 88% 4%,  oklch(0.80 0.20 66 / 0.16) 0px, transparent 40%),
     radial-gradient(at 4% 88%,  oklch(0.36 0.22 258 / 0.20) 0px, transparent 45%);
 
-  /* Sombras — mais expressivas */
   --shadow-elegant:    0 14px 50px -10px oklch(0.36 0.22 258 / 0.32);
   --shadow-glow:       0 0 80px oklch(0.56 0.24 254 / 0.50);
   --shadow-card:       0 2px 24px -6px oklch(0.11 0.045 255 / 0.09);
@@ -131,9 +128,6 @@
   --ring:   oklch(0.58 0.23 253);
 }
 
-/* ── Fontes ───────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
-
 body {
   font-family: var(--font-sans);
   background-color: var(--background);
@@ -158,7 +152,6 @@ body {
 .transition-spring   { transition: var(--transition-spring); }
 .font-display        { font-family: var(--font-display); letter-spacing: -0.03em; }
 
-/* Grid mais sutil e elegante */
 .bg-grid {
   background-image:
     linear-gradient(oklch(1 0 0 / 0.028) 1px, transparent 1px),
@@ -212,7 +205,6 @@ body {
 .animate-scale-in        { animation: scale-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .animate-ping-slow       { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
 
-/* Shimmer refinado — faixa mais estreita e rápida */
 .btn-shimmer {
   position: relative;
   overflow: hidden;
@@ -233,7 +225,6 @@ body {
   pointer-events: none;
 }
 
-/* Stat numbers âmbar — peso extra */
 .stat-number {
   font-family: var(--font-display);
   font-weight: 800;
@@ -245,7 +236,6 @@ body {
   background-clip: text;
 }
 
-/* Cards de serviço — zoom mais suave, overlay mais rico */
 .service-card {
   position: relative;
   overflow: hidden;
@@ -275,7 +265,6 @@ body {
   pointer-events: none;
 }
 
-/* Inputs — borda mais nítida no focus */
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
@@ -283,7 +272,6 @@ select:focus-visible {
   box-shadow: 0 0 0 3px oklch(0.36 0.22 258 / 0.22);
 }
 
-/* Scrollbar elegante */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -292,7 +280,6 @@ select:focus-visible {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary-glow); }
 
-/* Seleção de texto */
 ::selection {
   background: oklch(0.36 0.22 258 / 0.25);
   color: var(--foreground);
