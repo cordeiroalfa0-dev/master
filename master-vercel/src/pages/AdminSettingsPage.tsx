@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { usePageSeo } from "@/hooks/usePageSeo";
 import { useState, useEffect } from "react";
-import { Save, Zap, Settings, LogOut, Users, Loader2 } from "lucide-react";
+import { Save, Zap, Settings, LogOut, Users, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,22 +16,97 @@ const FIELDS: Array<{
   help: string;
   link?: string;
 }> = [
-  { key: "gtm_id",                      label: "Google Tag Manager ID",               placeholder: "GTM-XXXXXXX",                      help: "Cole o ID do seu container GTM.",                                         link: "https://tagmanager.google.com/" },
-  { key: "ga4_id",                      label: "Google Analytics 4 — Measurement ID", placeholder: "G-XXXXXXXXXX",                     help: "Usado para fallback direto caso o GTM não esteja configurado.",           link: "https://analytics.google.com/" },
-  { key: "google_ads_id",               label: "Google Ads — Conversion ID",           placeholder: "AW-XXXXXXXXX",                     help: "ID de conversão do Google Ads.",                                         link: "https://ads.google.com/" },
-  { key: "google_ads_conversion_label", label: "Google Ads — Conversion Label",        placeholder: "AbCdEfGhIjK",                      help: "Label da conversão específica." },
-  { key: "meta_pixel_id",               label: "Meta Pixel ID (Facebook/Instagram)",   placeholder: "123456789012345",                  help: "ID do pixel do Meta Business Suite.",                                    link: "https://business.facebook.com/events_manager" },
-  { key: "tiktok_pixel_id",             label: "TikTok Pixel ID",                      placeholder: "CXXXXXXXXXXXXXXXXX",               help: "ID do pixel do TikTok Ads Manager.",                                     link: "https://ads.tiktok.com/" },
-  { key: "clarity_id",                  label: "Microsoft Clarity — Project ID",       placeholder: "xxxxxxxxxx",                       help: "Grava sessões e mapas de calor gratuitamente.",                          link: "https://clarity.microsoft.com/" },
-  { key: "whatsapp_number",             label: "Número de WhatsApp",                   placeholder: "5541997539084",                    help: "Formato internacional sem + nem espaços." },
-  { key: "whatsapp_message",            label: "Mensagem padrão do WhatsApp",          placeholder: "Olá! Gostaria de solicitar um orçamento.", help: "Texto pré-preenchido ao clicar no botão." },
-  { key: "contact_email",               label: "Email de contato",                     placeholder: "contato@mastereletrica.com.br",    help: "Email exibido no rodapé e na página de contato." },
-  { key: "contact_phone",               label: "Telefone de contato",                  placeholder: "(41) 99753-9084",                  help: "Número exibido no site." },
+  {
+    key: "gtm_id",
+    label: "Google Tag Manager ID",
+    placeholder: "GTM-XXXXXXX",
+    help: "Cole o ID do seu container GTM.",
+    link: "https://tagmanager.google.com/",
+  },
+  {
+    key: "ga4_id",
+    label: "Google Analytics 4 — Measurement ID",
+    placeholder: "G-XXXXXXXXXX",
+    help: "Usado para fallback direto caso o GTM não esteja configurado.",
+    link: "https://analytics.google.com/",
+  },
+  {
+    key: "google_ads_id",
+    label: "Google Ads — Conversion ID",
+    placeholder: "AW-XXXXXXXXX",
+    help: "ID de conversão do Google Ads.",
+    link: "https://ads.google.com/",
+  },
+  {
+    key: "google_ads_conversion_label",
+    label: "Google Ads — Conversion Label",
+    placeholder: "AbCdEfGhIjK",
+    help: "Label da conversão específica.",
+  },
+  {
+    key: "meta_pixel_id",
+    label: "Meta Pixel ID (Facebook/Instagram)",
+    placeholder: "123456789012345",
+    help: "ID do pixel do Meta Business Suite.",
+    link: "https://business.facebook.com/events_manager",
+  },
+  {
+    key: "tiktok_pixel_id",
+    label: "TikTok Pixel ID",
+    placeholder: "CXXXXXXXXXXXXXXXXX",
+    help: "ID do pixel do TikTok Ads Manager.",
+    link: "https://ads.tiktok.com/",
+  },
+  {
+    key: "clarity_id",
+    label: "Microsoft Clarity — Project ID",
+    placeholder: "xxxxxxxxxx",
+    help: "Grava sessões e mapas de calor gratuitamente.",
+    link: "https://clarity.microsoft.com/",
+  },
+  {
+    key: "whatsapp_number",
+    label: "Número de WhatsApp",
+    placeholder: "5541997539084",
+    help: "Formato internacional sem + nem espaços.",
+  },
+  {
+    key: "whatsapp_message",
+    label: "Mensagem padrão do WhatsApp",
+    placeholder: "Olá! Gostaria de solicitar um orçamento.",
+    help: "Texto pré-preenchido ao clicar no botão.",
+  },
+  {
+    key: "contact_email",
+    label: "Email de contato",
+    placeholder: "contato@mastereletrica.com.br",
+    help: "Email exibido no rodapé e na página de contato.",
+  },
+  {
+    key: "contact_phone",
+    label: "Telefone de contato",
+    placeholder: "(41) 99753-9084",
+    help: "Número exibido no site.",
+  },
 ];
 
 const GROUPS = [
-  { title: "Rastreamento de Tráfego",  keys: ["gtm_id","ga4_id","google_ads_id","google_ads_conversion_label","meta_pixel_id","tiktok_pixel_id","clarity_id"] },
-  { title: "Contato e WhatsApp",       keys: ["whatsapp_number","whatsapp_message","contact_email","contact_phone"] },
+  {
+    title: "Rastreamento de Tráfego",
+    keys: [
+      "gtm_id",
+      "ga4_id",
+      "google_ads_id",
+      "google_ads_conversion_label",
+      "meta_pixel_id",
+      "tiktok_pixel_id",
+      "clarity_id",
+    ],
+  },
+  {
+    title: "Contato e WhatsApp",
+    keys: ["whatsapp_number", "whatsapp_message", "contact_email", "contact_phone"],
+  },
 ];
 
 export default function AdminSettingsPage() {
@@ -39,10 +114,9 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
+  const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Carrega configurações do Supabase ao montar
   useEffect(() => {
     supabase
       .from("site_settings")
@@ -65,11 +139,8 @@ export default function AdminSettingsPage() {
     setSaving(true);
     setSaveError(null);
 
-    // Upsert todos os campos de uma vez
     const upserts = Object.entries(settings).map(([key, value]) => ({ key, value }));
-    const { error } = await supabase
-      .from("site_settings")
-      .upsert(upserts, { onConflict: "key" });
+    const { error } = await supabase.from("site_settings").upsert(upserts, { onConflict: "key" });
 
     setSaving(false);
 
@@ -78,7 +149,6 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    // Invalida o cache do hook useSiteSettings para que o site reflita os novos dados
     invalidateSiteSettingsCache();
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -104,7 +174,14 @@ export default function AdminSettingsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link to="/admin/leads"><Users className="mr-1.5 h-4 w-4" /> Leads</Link>
+            <Link to="/admin/blog">
+              <BookOpen className="mr-1.5 h-4 w-4" /> Blog
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/admin/leads">
+              <Users className="mr-1.5 h-4 w-4" /> Leads
+            </Link>
           </Button>
           <Button variant="outline" size="sm" onClick={handleLogout}>
             <LogOut className="mr-1.5 h-4 w-4" /> Sair
@@ -116,8 +193,8 @@ export default function AdminSettingsPage() {
       <div className="mb-8 flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
         <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p className="text-sm text-foreground">
-          Cole os IDs abaixo e clique em <strong>Salvar</strong>. Os pixels são ativados automaticamente
-          quando o visitante aceitar os cookies. Campos em branco são ignorados.
+          Cole os IDs abaixo e clique em <strong>Salvar</strong>. Os pixels são ativados
+          automaticamente quando o visitante aceitar os cookies. Campos em branco são ignorados.
         </p>
       </div>
 
@@ -138,10 +215,16 @@ export default function AdminSettingsPage() {
                   return (
                     <div key={key} className="rounded-xl border bg-card p-5 shadow-sm">
                       <div className="flex items-center justify-between gap-2">
-                        <Label htmlFor={key} className="text-sm font-semibold">{field.label}</Label>
+                        <Label htmlFor={key} className="text-sm font-semibold">
+                          {field.label}
+                        </Label>
                         {field.link && (
-                          <a href={field.link} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline">
+                          <a
+                            href={field.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline"
+                          >
                             Abrir painel ↗
                           </a>
                         )}
@@ -169,12 +252,18 @@ export default function AdminSettingsPage() {
               className="bg-gradient-primary font-semibold shadow-elegant hover:opacity-90 disabled:opacity-60"
             >
               {saving ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                </>
               ) : (
-                <><Save className="mr-2 h-4 w-4" /> Salvar configurações</>
+                <>
+                  <Save className="mr-2 h-4 w-4" /> Salvar configurações
+                </>
               )}
             </Button>
-            {saved     && <span className="text-sm font-medium text-success">✓ Salvo com sucesso!</span>}
+            {saved && (
+              <span className="text-sm font-medium text-success">✓ Salvo com sucesso!</span>
+            )}
             {saveError && <span className="text-sm font-medium text-destructive">{saveError}</span>}
           </div>
         </div>
@@ -182,4 +271,3 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
-
