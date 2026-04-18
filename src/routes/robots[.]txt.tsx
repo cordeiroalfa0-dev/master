@@ -1,0 +1,25 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { SITE_CONFIG } from "@/lib/site-config";
+
+export const Route = createFileRoute("/robots.txt")({
+  server: {
+    handlers: {
+      GET: async () => {
+        const body = `User-agent: *
+Allow: /
+Disallow: /obrigado
+Disallow: /admin
+Disallow: /admin/
+
+Sitemap: ${SITE_CONFIG.url}/sitemap.xml
+`;
+        return new Response(body, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "public, max-age=86400",
+          },
+        });
+      },
+    },
+  },
+});
