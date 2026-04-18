@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { usePageSeo } from "@/hooks/usePageSeo";
 import { useState, useEffect } from "react";
-import { Save, Zap, Settings, LogOut, Users, Loader2 } from "lucide-react";
+import { Save, Zap, Settings, LogOut, Users, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +42,6 @@ export default function AdminSettingsPage() {
   const [saved, setSaved]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Carrega configurações do Supabase ao montar
   useEffect(() => {
     supabase
       .from("site_settings")
@@ -65,7 +64,6 @@ export default function AdminSettingsPage() {
     setSaving(true);
     setSaveError(null);
 
-    // Upsert todos os campos de uma vez
     const upserts = Object.entries(settings).map(([key, value]) => ({ key, value }));
     const { error } = await supabase
       .from("site_settings")
@@ -78,7 +76,6 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    // Invalida o cache do hook useSiteSettings para que o site reflita os novos dados
     invalidateSiteSettingsCache();
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -103,6 +100,9 @@ export default function AdminSettingsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/admin/blog"><BookOpen className="mr-1.5 h-4 w-4" /> Blog</Link>
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link to="/admin/leads"><Users className="mr-1.5 h-4 w-4" /> Leads</Link>
           </Button>
@@ -182,4 +182,3 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
-
