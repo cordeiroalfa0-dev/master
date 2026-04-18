@@ -34,7 +34,7 @@ export function useLeadSubmit({ source = "form", redirectOnSuccess = true, onSuc
     setLoading(true);
 
     const utm = getUTMData();
-    const { error } = await supabase.from("leads").insert({
+    const { error } = await supabase.from("leads").insert([{
       nome: payload.nome,
       telefone: payload.telefone,
       email: payload.email ?? null,
@@ -52,7 +52,7 @@ export function useLeadSubmit({ source = "form", redirectOnSuccess = true, onSuc
       referrer: utm.referrer ?? (typeof document !== "undefined" ? document.referrer : null),
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       _form_source: source,
-    });
+    }] as any);
 
     setLoading(false);
 
