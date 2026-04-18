@@ -65,9 +65,9 @@ export function TrackingScripts() {
       s.innerHTML = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=window.gtag||gtag;gtag('config','${settings.google_ads_id}');`;
       document.head.appendChild(s);
       // Expõe IDs para a página /obrigado disparar evento de conversão
-      (window as Record<string, unknown>).__GADS_ID__ = settings.google_ads_id;
+      (window as any).__GADS_ID__ = settings.google_ads_id;
       if (settings.google_ads_conversion_label) {
-        (window as Record<string, unknown>).__GADS_LABEL__ = settings.google_ads_conversion_label;
+        (window as any).__GADS_LABEL__ = settings.google_ads_conversion_label;
       }
     }
 
@@ -125,3 +125,4 @@ export function TrackingScripts() {
     </>
   );
 }
+
