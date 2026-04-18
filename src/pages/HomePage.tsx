@@ -100,10 +100,10 @@ function HomePage() {
             <h1 className="font-display text-5xl font-bold leading-[1.0] text-balance md:text-6xl lg:text-7xl">
               Automatize seu{" "}
               <span className="relative">
-                <span className="bg-gradient-energy bg-clip-text text-transparent">espaço</span>
+                <span className="text-energy">espaço</span>
               </span>
               <br />e economize até{" "}
-              <span className="bg-gradient-energy bg-clip-text text-transparent">40%</span>
+              <span className="text-energy">40%</span>
               {" "}de energia
             </h1>
 
@@ -482,3 +482,4 @@ function HomePage() {
 }
 
 export default HomePage;
+
