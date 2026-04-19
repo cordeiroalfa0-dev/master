@@ -22,6 +22,9 @@ import TermsPage from "@/pages/TermsPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminLeadsPage from "@/pages/AdminLeadsPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
+import BlogPage from "@/pages/BlogPage";
+import BlogPostPage from "@/pages/BlogPostPage";
+import AdminBlogPage from "@/pages/AdminBlogPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 function Layout() {
@@ -42,7 +45,10 @@ function Layout() {
             <Route path="/obrigado" element={<ThankYouPage />} />
             <Route path="/politica-privacidade" element={<PrivacyPage />} />
             <Route path="/termos" element={<TermsPage />} />
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/admin/blog" element={<AdminBlogPage />} />
             <Route path="/admin/leads" element={<AdminLeadsPage />} />
             <Route path="/admin/configuracoes" element={<AdminSettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
@@ -65,3 +71,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
