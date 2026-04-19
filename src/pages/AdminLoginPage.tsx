@@ -30,7 +30,7 @@ function AdminLoginPage() {
       return;
     }
 
-    navigate("/admin/configuracoes");
+    navigate("/admin/blog");
   }
 
   return (

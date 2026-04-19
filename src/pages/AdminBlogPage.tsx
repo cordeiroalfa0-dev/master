@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { usePageSeo } from "@/hooks/usePageSeo";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { isAdminLoggedIn, adminLogout } from "@/lib/admin-auth";
-import { supabase } from "@/integrations/supabase/client";
 import type { BlogPost } from "./BlogPage";
+import { getLocalPosts, saveLocalPosts } from "@/lib/blog-storage";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function slugify(text: string) {
@@ -48,38 +48,6 @@ const EMPTY_FORM: FormData = {
   tags: [], publicado: false, autor: "Master Elétrica",
 };
 
-// ── Chamada à API do Claude para gerar conteúdo ────────────────────────────
-async function generateContent(titulo: string, tags: string[]): Promise<{ resumo: string; conteudo: string; meta_title: string; meta_description: string }> {
-  const tagStr = tags.join(", ") || "automação";
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: `Você é redator especialista em automação elétrica para a empresa Master Elétrica Automatizada de Curitiba, PR.
-
-Gere um artigo de blog SEO completo em português brasileiro sobre: "${titulo}"
-Categorias: ${tagStr}
-
-Responda APENAS com JSON válido (sem markdown, sem backticks):
-{
-  "resumo": "Resumo do artigo em 2 frases para SEO (max 160 chars)",
-  "meta_title": "Título SEO com palavra-chave (max 60 chars)",
-  "meta_description": "Meta description para SEO (max 155 chars)",
-  "conteudo": "Artigo completo em markdown com ## títulos, listas e parágrafos. Mínimo 600 palavras. Mencione Curitiba, automação, Master Elétrica. Inclua dicas práticas, números e CTAs naturais. Use ## para seções, - para listas, **negrito** para destaques."
-}`
-      }]
-    })
-  });
-  const data = await response.json();
-  const text = data.content?.find((b: { type: string }) => b.type === "text")?.text ?? "{}";
-  const clean = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
-}
-
 // ── Geração de imagem via Unsplash (busca por relevância) ──────────────────
 async function generateImage(titulo: string, tags: string[]): Promise<string> {
   const queries: Record<string, string> = {
@@ -96,7 +64,6 @@ async function generateImage(titulo: string, tags: string[]): Promise<string> {
   return `https://images.unsplash.com/photo-${unsplashId(q, rand)}?w=1200&h=630&fit=crop&auto=format&q=80`;
 }
 
-// Pool curado de IDs Unsplash por tema
 function unsplashId(q: string, n: number): string {
   const pools: Record<string, string[]> = {
     "smart home automation living room": ["1558618666-fcd25c85cd64","1586953208448-b8b12d93c0a5","1484154218962-a197022b5858","1565043589221-1a6fd9ae45c7","1564078516393-cf04bd966897"],
@@ -110,28 +77,37 @@ function unsplashId(q: string, n: number): string {
   return pool[n % pool.length];
 }
 
-// ── Componente principal ───────────────────────────────────────────────────
 export default function AdminBlogPage() {
   usePageSeo({ title: "Admin — Blog | Master Elétrica", description: "", path: "/admin/blog", noindex: true });
+
+  if (!isAdminLoggedIn()) {
+    return (
+      <div className="mx-auto max-w-md py-24 text-center">
+        <h1 className="font-display text-2xl font-bold">Acesso negado</h1>
+        <p className="mt-2 text-muted-foreground">Você precisa estar autenticado para acessar esta página.</p>
+        <Link to="/admin/login" className="mt-4 inline-block text-primary hover:underline">Ir para login</Link>
+      </div>
+    );
+  }
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [view, setView] = useState<"list" | "edit">("list");
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [generatingContent, setGeneratingContent] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [slugManual, setSlugManual] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  const navigate = useNavigate();
 
-  function handleLogout() { adminLogout(); window.location.href = "/admin/login"; }
+  function handleLogout() { adminLogout(); navigate("/admin/login"); }
 
-  async function fetchPosts() {
+  function fetchPosts() {
     setLoadingPosts(true);
-    const { data } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
-    setPosts((data ?? []) as BlogPost[]);
+    const localPosts = getLocalPosts();
+    setPosts(localPosts);
     setLoadingPosts(false);
   }
 
@@ -172,28 +148,6 @@ export default function AdminBlogPage() {
     }));
   }
 
-  // ── Gerar conteúdo via IA ──────────────────────────────────────────────
-  async function handleGenerateContent() {
-    if (!form.titulo.trim()) { setSaveMsg({ type:"err", text:"Informe o título antes de gerar conteúdo." }); return; }
-    setGeneratingContent(true);
-    setSaveMsg(null);
-    try {
-      const result = await generateContent(form.titulo, form.tags);
-      setForm(f => ({
-        ...f,
-        resumo: result.resumo ?? f.resumo,
-        conteudo: result.conteudo ?? f.conteudo,
-        meta_title: result.meta_title ?? f.meta_title,
-        meta_description: result.meta_description ?? f.meta_description,
-      }));
-      setSaveMsg({ type:"ok", text:"Conteúdo gerado com sucesso! Revise e edite antes de publicar." });
-    } catch {
-      setSaveMsg({ type:"err", text:"Erro ao gerar conteúdo. Verifique sua conexão e tente novamente." });
-    }
-    setGeneratingContent(false);
-  }
-
-  // ── Gerar imagem ──────────────────────────────────────────────────────
   async function handleGenerateImage() {
     setGeneratingImage(true);
     const url = await generateImage(form.titulo, form.tags);
@@ -201,7 +155,6 @@ export default function AdminBlogPage() {
     setGeneratingImage(false);
   }
 
-  // ── Salvar no Supabase ─────────────────────────────────────────────────
   async function handleSave(publish?: boolean) {
     if (!form.titulo.trim() || !form.slug.trim()) {
       setSaveMsg({ type:"err", text:"Título e slug são obrigatórios." }); return;
@@ -209,7 +162,11 @@ export default function AdminBlogPage() {
     setSaving(true);
     setSaveMsg(null);
 
-    const payload = {
+    const isPublished = publish !== undefined ? publish : form.publicado;
+    const now = new Date().toISOString();
+
+    const payload: BlogPost = {
+      id: form.id || Math.random().toString(36).substr(2, 9),
       titulo: form.titulo.trim(),
       slug: form.slug.trim(),
       resumo: form.resumo || null,
@@ -219,54 +176,53 @@ export default function AdminBlogPage() {
       og_image: form.og_image || null,
       tags: form.tags.length > 0 ? form.tags : null,
       autor: form.autor || "Master Elétrica",
-      publicado: publish !== undefined ? publish : form.publicado,
-      publicado_em: (publish ?? form.publicado) ? new Date().toISOString() : null,
+      publicado: isPublished,
+      publicado_em: isPublished ? (form.id ? (posts.find(p => p.id === form.id)?.publicado_em || now) : now) : null,
+      created_at: form.id ? (posts.find(p => p.id === form.id)?.created_at || now) : now,
+      updated_at: now,
     };
 
-    let error;
+    let updatedPosts;
     if (form.id) {
-      ({ error } = await supabase.from("blog_posts").update(payload).eq("id", form.id));
+      updatedPosts = posts.map(p => p.id === form.id ? payload : p);
     } else {
-      const { data, error: e } = await supabase.from("blog_posts").insert([payload]).select().single();
-      error = e;
-      if (data) setForm(f => ({ ...f, id: (data as BlogPost).id, publicado: payload.publicado }));
+      updatedPosts = [payload, ...posts];
     }
 
+    saveLocalPosts(updatedPosts);
+    setPosts(updatedPosts);
+    setForm(f => ({ ...f, id: payload.id, publicado: payload.publicado }));
     setSaving(false);
-    if (error) {
-      setSaveMsg({ type:"err", text: `Erro: ${error.message}` });
-    } else {
-      setSaveMsg({ type:"ok", text: publish ? "Artigo publicado!" : "Rascunho salvo." });
-      setForm(f => ({ ...f, publicado: payload.publicado }));
-      await fetchPosts();
-    }
+    setSaveMsg({ type:"ok", text: publish ? "Artigo publicado!" : "Rascunho salvo." });
   }
 
-  // ── Toggle publicado ──────────────────────────────────────────────────
-  async function togglePublish(post: BlogPost) {
+  function togglePublish(post: BlogPost) {
     const next = !post.publicado;
-    await supabase.from("blog_posts").update({ publicado: next, publicado_em: next ? new Date().toISOString() : null }).eq("id", post.id);
-    await fetchPosts();
+    const updated = posts.map(p => p.id === post.id ? { 
+      ...p, 
+      publicado: next, 
+      publicado_em: next ? new Date().toISOString() : null 
+    } : p);
+    saveLocalPosts(updated);
+    setPosts(updated);
   }
 
-  // ── Deletar ────────────────────────────────────────────────────────────
-  async function confirmDelete() {
+  function confirmDelete() {
     if (!deleteId) return;
-    await supabase.from("blog_posts").delete().eq("id", deleteId);
+    const updated = posts.filter(p => p.id !== deleteId);
+    saveLocalPosts(updated);
+    setPosts(updated);
     setDeleteId(null);
-    await fetchPosts();
+    setSaveMsg({ type:"ok", text: "Artigo deletado com sucesso." });
   }
 
-  // ── RENDER ─────────────────────────────────────────────────────────────
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
-
-      {/* ── Topbar ── */}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <BookOpen className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="font-display text-2xl font-bold">Blog CMS</h1>
+            <h1 className="font-display text-2xl font-bold">Blog CMS (Local)</h1>
             <p className="text-sm text-muted-foreground">{posts.length} artigos · {posts.filter(p => p.publicado).length} publicados</p>
           </div>
         </div>
@@ -287,7 +243,6 @@ export default function AdminBlogPage() {
         </div>
       </div>
 
-      {/* ────────── LISTA ────────── */}
       {view === "list" && (
         <>
           {loadingPosts ? (
@@ -306,11 +261,9 @@ export default function AdminBlogPage() {
             <div className="space-y-3">
               {posts.map(post => (
                 <div key={post.id} className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
-                  {/* Thumbnail */}
                   <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
                     {post.og_image ? <img src={post.og_image} alt="" className="h-full w-full object-cover"/> : <div className="h-full w-full flex items-center justify-center text-xl">⚡</div>}
                   </div>
-                  {/* Info */}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold truncate">{post.titulo}</span>
@@ -323,12 +276,11 @@ export default function AdminBlogPage() {
                       {post.tags && post.tags.length > 0 && <span> · {post.tags.slice(0,3).join(", ")}</span>}
                     </div>
                   </div>
-                  {/* Ações */}
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer"
+                    <Link to={`/blog/${post.slug}`} target="_blank"
                       className="rounded-md border p-1.5 transition-colors hover:bg-accent" title="Visualizar">
                       <Eye className="h-3.5 w-3.5"/>
-                    </a>
+                    </Link>
                     <button onClick={() => togglePublish(post)}
                       className="rounded-md border p-1.5 transition-colors hover:bg-accent" title={post.publicado ? "Despublicar" : "Publicar"}>
                       {post.publicado ? <EyeOff className="h-3.5 w-3.5"/> : <Eye className="h-3.5 w-3.5 text-green-600"/>}
@@ -349,162 +301,93 @@ export default function AdminBlogPage() {
         </>
       )}
 
-      {/* ────────── EDITOR ────────── */}
       {view === "edit" && (
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-
-          {/* Coluna principal */}
           <div className="space-y-6">
-
-            {/* IA Banner */}
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="h-5 w-5 shrink-0 text-primary mt-0.5"/>
-                  <div>
-                    <p className="text-sm font-semibold">Geração com IA</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Digite o título, escolha as categorias e clique em "Gerar com IA" para criar o artigo completo automaticamente.</p>
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="titulo">Título do Artigo</Label>
+                  <Input id="titulo" value={form.titulo} onChange={e => update("titulo", e.target.value)} placeholder="Ex: Como automatizar sua iluminação" className="text-lg font-semibold"/>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="slug">URL amigável (slug)</Label>
+                  <div className="flex gap-2">
+                    <Input id="slug" value={form.slug} onChange={e => { setSlugManual(true); update("slug", e.target.value); }} placeholder="como-automatizar-iluminacao"/>
+                    <Button variant="outline" size="icon" onClick={() => { setSlugManual(false); update("slug", slugify(form.titulo)); }} title="Gerar automático"><RefreshCw className="h-4 w-4"/></Button>
                   </div>
                 </div>
-                <Button size="sm" onClick={handleGenerateContent} disabled={generatingContent || !form.titulo.trim()}
-                  className="bg-gradient-primary text-primary-foreground font-semibold shrink-0">
-                  {generatingContent ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin"/>Gerando...</> : <><Sparkles className="mr-1.5 h-4 w-4"/>Gerar com IA</>}
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="resumo">Resumo / Lead</Label>
+                  <Textarea id="resumo" value={form.resumo} onChange={e => update("resumo", e.target.value)} placeholder="Breve introdução que aparece na listagem..." rows={3} className="resize-none"/>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="conteudo">Conteúdo (Markdown)</Label>
+                    <span className="text-[10px] text-muted-foreground">Suporta ## Títulos, **Negrito**, - Listas</span>
+                  </div>
+                  <Textarea id="conteudo" ref={contentRef} value={form.conteudo} onChange={e => update("conteudo", e.target.value)} placeholder="Escreva seu artigo aqui..." className="min-h-[400px] font-mono text-sm leading-relaxed"/>
+                </div>
               </div>
             </div>
-
-            {/* Feedback */}
-            {saveMsg && (
-              <div className={`flex items-start gap-2.5 rounded-xl border p-3 text-sm ${saveMsg.type === "ok" ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
-                {saveMsg.type === "ok" ? <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5"/> : <AlertCircle className="h-4 w-4 shrink-0 mt-0.5"/>}
-                {saveMsg.text}
-              </div>
-            )}
-
-            {/* Título */}
-            <div className="space-y-1.5">
-              <Label htmlFor="titulo" className="text-sm font-semibold">Título do artigo *</Label>
-              <Input id="titulo" value={form.titulo} onChange={e => update("titulo", e.target.value)}
-                placeholder="Ex: Como automatizar sua casa em Curitiba em 2025" className="text-base font-medium"/>
-            </div>
-
-            {/* Slug */}
-            <div className="space-y-1.5">
-              <Label htmlFor="slug" className="text-sm font-semibold">Slug (URL) *</Label>
-              <div className="flex gap-2 items-center">
-                <span className="text-xs text-muted-foreground shrink-0">/blog/</span>
-                <Input id="slug" value={form.slug}
-                  onChange={e => { setSlugManual(true); update("slug", slugify(e.target.value)); }}
-                  placeholder="como-automatizar-casa-curitiba" className="font-mono text-sm"/>
-                <button onClick={() => { setSlugManual(false); update("slug", slugify(form.titulo)); }}
-                  className="shrink-0 rounded-md border p-2 hover:bg-accent transition-colors" title="Regerar slug">
-                  <RefreshCw className="h-3.5 w-3.5"/>
-                </button>
-              </div>
-            </div>
-
-            {/* Resumo */}
-            <div className="space-y-1.5">
-              <Label htmlFor="resumo" className="text-sm font-semibold">Resumo / Lead</Label>
-              <Textarea id="resumo" rows={3} value={form.resumo} onChange={e => update("resumo", e.target.value)}
-                placeholder="Resumo do artigo exibido na listagem e usado como meta description fallback..."/>
-              <p className="text-xs text-muted-foreground">{form.resumo.length}/160 chars</p>
-            </div>
-
-            {/* Conteúdo */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="conteudo" className="text-sm font-semibold">Conteúdo (Markdown)</Label>
-                <span className="text-xs text-muted-foreground">{form.conteudo.split(/\s+/).filter(Boolean).length} palavras</span>
-              </div>
-              <Textarea ref={contentRef} id="conteudo" rows={22} value={form.conteudo}
-                onChange={e => update("conteudo", e.target.value)}
-                placeholder="## Título da seção&#10;&#10;Escreva o conteúdo em markdown...&#10;&#10;- Item de lista&#10;- Outro item&#10;&#10;**Texto em negrito** para destaques."
-                className="font-mono text-sm leading-relaxed resize-y"/>
-              <p className="text-xs text-muted-foreground">Use ## para títulos, - para listas, **negrito** para destaques.</p>
-            </div>
-
           </div>
 
-          {/* Sidebar de configurações */}
-          <div className="space-y-5">
-
-            {/* Publicar / Salvar */}
-            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
-              <h3 className="font-semibold text-sm">Publicação</h3>
-              <div className="flex items-center gap-2">
-                <div className={`h-2.5 w-2.5 rounded-full ${form.publicado ? "bg-green-500" : "bg-yellow-400"}`}/>
-                <span className="text-sm">{form.publicado ? "Publicado" : "Rascunho"}</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Button onClick={() => handleSave()} disabled={saving} variant="outline" className="w-full justify-start">
-                  {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin"/> : <Save className="mr-1.5 h-4 w-4"/>}
-                  Salvar rascunho
+          <div className="space-y-6">
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <h3 className="mb-4 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">Ações</h3>
+              <div className="space-y-3">
+                <Button className="w-full bg-gradient-primary font-bold text-primary-foreground" onClick={() => handleSave()} disabled={saving}>
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                  Salvar Rascunho
                 </Button>
-                <Button onClick={() => handleSave(true)} disabled={saving || form.publicado}
-                  className="w-full justify-start bg-gradient-primary text-primary-foreground font-semibold">
-                  {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin"/> : <Eye className="mr-1.5 h-4 w-4"/>}
-                  {form.publicado ? "Já publicado" : "Publicar agora"}
+                <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5" onClick={() => handleSave(true)} disabled={saving}>
+                  <CheckCircle2 className="mr-2 h-4 w-4"/> Publicar Agora
                 </Button>
-                {form.publicado && (
-                  <Button onClick={() => handleSave(false)} disabled={saving} variant="outline" className="w-full justify-start text-yellow-700 border-yellow-300">
-                    <EyeOff className="mr-1.5 h-4 w-4"/> Despublicar
-                  </Button>
+                {saveMsg && (
+                  <div className={`flex items-center gap-2 rounded-lg p-3 text-xs font-medium ${saveMsg.type === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                    {saveMsg.type === "ok" ? <CheckCircle2 className="h-4 w-4 shrink-0"/> : <AlertCircle className="h-4 w-4 shrink-0"/>}
+                    {saveMsg.text}
+                    <button className="ml-auto" onClick={() => setSaveMsg(null)}><X className="h-3 w-3"/></button>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Imagem */}
-            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
-              <h3 className="font-semibold text-sm">Imagem de capa</h3>
-              {form.og_image && (
-                <div className="relative rounded-lg overflow-hidden aspect-video">
-                  <img src={form.og_image} alt="Capa" className="h-full w-full object-cover"/>
-                  <button onClick={() => update("og_image", "")}
-                    className="absolute top-1.5 right-1.5 rounded-full bg-black/60 p-1 text-white hover:bg-black/80">
-                    <X className="h-3 w-3"/>
-                  </button>
-                </div>
-              )}
-              <div className="flex flex-col gap-2">
-                <Button size="sm" onClick={handleGenerateImage} disabled={generatingImage} variant="outline" className="w-full justify-start">
-                  {generatingImage ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin"/> : <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary"/>}
-                  Gerar imagem com IA
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <h3 className="mb-4 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">Imagem de Capa</h3>
+              <div className="aspect-[16/9] overflow-hidden rounded-lg border bg-muted mb-3">
+                {form.og_image ? <img src={form.og_image} alt="Preview" className="h-full w-full object-cover"/> : <div className="flex h-full flex-col items-center justify-center text-muted-foreground"><ImageIcon className="mb-2 h-8 w-8 opacity-20"/><span className="text-[10px]">Sem imagem</span></div>}
+              </div>
+              <div className="space-y-2">
+                <Input value={form.og_image} onChange={e => update("og_image", e.target.value)} placeholder="URL da imagem..." className="text-xs"/>
+                <Button variant="secondary" size="sm" className="w-full text-xs" onClick={handleGenerateImage} disabled={generatingImage}>
+                  {generatingImage ? <Loader2 className="mr-2 h-3 w-3 animate-spin"/> : <Sparkles className="mr-2 h-3 w-3"/>}
+                  Sugerir Imagem
                 </Button>
-                <div className="flex items-center gap-1.5">
-                  <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground"/>
-                  <Input value={form.og_image} onChange={e => update("og_image", e.target.value)}
-                    placeholder="https://... URL da imagem" className="text-xs h-8"/>
-                </div>
               </div>
             </div>
 
-            {/* Categorias */}
-            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
-              <h3 className="font-semibold text-sm">Categorias / Tags</h3>
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <h3 className="mb-4 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">Categorias</h3>
               <div className="flex flex-wrap gap-2">
                 {TAG_OPTIONS.map(tag => (
-                  <button key={tag} onClick={() => toggleTag(tag)}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-all border ${form.tags.includes(tag) ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent border-border"}`}>
+                  <button key={tag} onClick={() => toggleTag(tag)} className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${form.tags.includes(tag) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}>
                     {tag}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* SEO */}
-            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
-              <h3 className="font-semibold text-sm">SEO</h3>
+            <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-4">
+              <h3 className="font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">SEO</h3>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Meta title</Label>
-                <Input value={form.meta_title} onChange={e => update("meta_title", e.target.value)}
-                  placeholder="Título para Google (max 60)" className="text-sm"/>
+                <Label className="text-xs text-muted-foreground">Meta Title</Label>
+                <Input value={form.meta_title} onChange={e => update("meta_title", e.target.value)} placeholder="Título para Google (max 60)"/>
                 <p className="text-xs text-muted-foreground">{form.meta_title.length}/60</p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Meta description</Label>
-                <Textarea rows={3} value={form.meta_description} onChange={e => update("meta_description", e.target.value)}
-                  placeholder="Descrição para Google (max 155)" className="text-sm resize-none"/>
+                <Textarea rows={3} value={form.meta_description} onChange={e => update("meta_description", e.target.value)} placeholder="Descrição para Google (max 155)" className="text-sm resize-none"/>
                 <p className="text-xs text-muted-foreground">{form.meta_description.length}/155</p>
               </div>
               <div className="space-y-1.5">
@@ -512,12 +395,10 @@ export default function AdminBlogPage() {
                 <Input value={form.autor} onChange={e => update("autor", e.target.value)} className="text-sm"/>
               </div>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* ── Modal de confirmação de exclusão ── */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setDeleteId(null)}>
           <div className="mx-4 rounded-2xl border bg-card p-6 shadow-xl max-w-sm w-full" onClick={e => e.stopPropagation()}>

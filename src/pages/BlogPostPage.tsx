@@ -2,12 +2,12 @@ import { useParams, Link } from "react-router-dom";
 import { usePageSeo } from "@/hooks/usePageSeo";
 import { ArrowLeft, Calendar, Clock, Phone, User, Tag } from "lucide-react";
 import { WhatsAppButton } from "@/components/WhatsAppFloat";
-import { STATIC_POSTS, BlogPost, readTime, tagColor } from "./BlogPage";
+import { BlogPost, readTime, tagColor } from "./BlogPage";
 import { SITE_CONFIG } from "@/lib/site-config";
 import { trackPhone } from "@/lib/analytics";
 import { LeadForm } from "@/components/LeadForm";
-import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { getPostBySlug } from "@/lib/blog-storage";
 
 // ── Renderer de markdown simples ──────────────────────────────────────────
 function MarkdownContent({ content }: { content: string }) {
@@ -29,7 +29,6 @@ function MarkdownContent({ content }: { content: string }) {
   }
 
   function parseLine(text: string): React.ReactNode {
-    // bold + italic combos
     const parts = text.split(/(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
     return parts.map((p, i) => {
       if (p.startsWith("***") && p.endsWith("***")) return <strong key={i} className="font-semibold italic">{p.slice(3, -3)}</strong>;
@@ -42,7 +41,6 @@ function MarkdownContent({ content }: { content: string }) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-
     if (line.startsWith("# ")) {
       flushList();
       elements.push(<h1 key={key++} className="mt-8 mb-4 font-display text-3xl font-bold">{parseLine(line.slice(2))}</h1>);
@@ -87,7 +85,6 @@ function MarkdownContent({ content }: { content: string }) {
   return <>{elements}</>;
 }
 
-// ── Página principal ───────────────────────────────────────────────────────
 export default function BlogPostPage() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<BlogPost | null>(null);
@@ -102,22 +99,9 @@ export default function BlogPostPage() {
 
   useEffect(() => {
     if (!slug) return;
-    supabase.from("blog_posts").select("*").eq("slug", slug).eq("publicado", true).single()
-      .then(
-        ({ data }) => {
-          if (data) { setPost(data as BlogPost); }
-          else {
-            const fallback = STATIC_POSTS.find(p => p.slug === slug);
-            setPost(fallback ?? null);
-          }
-          setLoading(false);
-        },
-        () => {
-          const fallback = STATIC_POSTS.find(p => p.slug === slug);
-          setPost(fallback ?? null);
-          setLoading(false);
-        }
-      );
+    const localPost = getPostBySlug(slug);
+    setPost(localPost ?? null);
+    setLoading(false);
   }, [slug]);
 
   if (loading) {
@@ -146,7 +130,6 @@ export default function BlogPostPage() {
 
   return (
     <>
-      {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="relative h-72 md:h-[420px]">
           {post.og_image ? (
@@ -180,10 +163,8 @@ export default function BlogPostPage() {
         </div>
       </section>
 
-      {/* ── Conteúdo ── */}
       <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
         <div className="grid gap-12 lg:grid-cols-[1fr_340px]">
-          {/* Artigo */}
           <article>
             {post.resumo && (
               <p className="mb-8 text-lg leading-relaxed text-muted-foreground border-l-4 border-primary pl-5 py-1 bg-primary/5 rounded-r-lg">
@@ -199,7 +180,6 @@ export default function BlogPostPage() {
               </div>
             )}
 
-            {/* Tags footer */}
             {post.tags && post.tags.length > 0 && (
               <div className="mt-10 flex flex-wrap items-center gap-2 border-t pt-6">
                 <Tag className="h-4 w-4 text-muted-foreground" />
@@ -210,7 +190,6 @@ export default function BlogPostPage() {
             )}
           </article>
 
-          {/* Sidebar */}
           <aside className="lg:sticky lg:top-24 lg:self-start space-y-6">
             <div className="rounded-2xl border bg-card p-6 shadow-card">
               <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-primary">Orçamento grátis</div>

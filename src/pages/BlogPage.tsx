@@ -4,7 +4,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbSchema } from "@/lib/schema";
 import { Calendar, Clock, ArrowRight, Rss } from "lucide-react";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getPublicPosts } from "@/lib/blog-storage";
 
 export interface BlogPost {
   id: string;
@@ -24,9 +24,9 @@ export interface BlogPost {
 }
 
 export const STATIC_POSTS: BlogPost[] = [
-  { id:"s1", slug:"quanto-custa-automacao-residencial-curitiba", titulo:"Quanto custa automatizar uma casa em Curitiba em 2025?", resumo:"Descubra os valores reais de projetos de automação residencial em Curitiba, desde apartamentos compactos até coberturas de alto padrão.", conteudo:null, meta_title:null, meta_description:null, og_image:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=450&fit=crop&auto=format&q=80", publicado:true, publicado_em:"2025-03-10T00:00:00Z", autor:"Master Elétrica", tags:["Residencial"], created_at:"2025-03-10T00:00:00Z", updated_at:"2025-03-10T00:00:00Z" },
-  { id:"s2", slug:"automacao-residencial-vs-predial-diferenca", titulo:"Automação residencial x predial: qual a diferença?", resumo:"Entenda as principais diferenças entre automação para casas e para edifícios, quais tecnologias são usadas em cada caso.", conteudo:null, meta_title:null, meta_description:null, og_image:"https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=450&fit=crop&auto=format&q=80", publicado:true, publicado_em:"2025-02-20T00:00:00Z", autor:"Master Elétrica", tags:["Guia"], created_at:"2025-02-20T00:00:00Z", updated_at:"2025-02-20T00:00:00Z" },
-  { id:"s3", slug:"economia-energia-automacao-industrial-curitiba", titulo:"Como a automação industrial reduz custos na sua fábrica", resumo:"Empresas em Curitiba reduziram até 40% nos custos operacionais com automação industrial.", conteudo:null, meta_title:null, meta_description:null, og_image:"https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=450&fit=crop&auto=format&q=80", publicado:true, publicado_em:"2025-01-15T00:00:00Z", autor:"Master Elétrica", tags:["Industrial"], created_at:"2025-01-15T00:00:00Z", updated_at:"2025-01-15T00:00:00Z" },
+  { id:"s1", slug:"quanto-custa-automacao-residencial-curitiba", titulo:"Quanto custa automatizar uma casa em Curitiba em 2025?", resumo:"Descubra os valores reais de projetos de automação residencial em Curitiba, desde apartamentos compactos até coberturas de alto padrão.", conteudo:"## O custo da automação em Curitiba\n\nAutomatizar uma residência é um investimento que traz conforto e valorização imobiliária.", meta_title:null, meta_description:null, og_image:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=450&fit=crop&auto=format&q=80", publicado:true, publicado_em:"2025-03-10T00:00:00Z", autor:"Master Elétrica", tags:["Residencial"], created_at:"2025-03-10T00:00:00Z", updated_at:"2025-03-10T00:00:00Z" },
+  { id:"s2", slug:"automacao-residencial-vs-predial-diferenca", titulo:"Automação residencial x predial: qual a diferença?", resumo:"Entenda as principais diferenças entre automação para casas e para edifícios, quais tecnologias são usadas em cada caso.", conteudo:"## Residencial vs Predial\n\nEmbora usem tecnologias similares, os objetivos são diferentes.", meta_title:null, meta_description:null, og_image:"https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&h=450&fit=crop&auto=format&q=80", publicado:true, publicado_em:"2025-02-20T00:00:00Z", autor:"Master Elétrica", tags:["Guia"], created_at:"2025-02-20T00:00:00Z", updated_at:"2025-02-20T00:00:00Z" },
+  { id:"s3", slug:"economia-energia-automacao-industrial-curitiba", titulo:"Como a automação industrial reduz custos na sua fábrica", resumo:"Empresas em Curitiba reduziram até 40% nos custos operacionais com automação industrial.", conteudo:"## Economia Industrial\n\nA automação de processos industriais é a chave para a competitividade.", meta_title:null, meta_description:null, og_image:"https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=450&fit=crop&auto=format&q=80", publicado:true, publicado_em:"2025-01-15T00:00:00Z", autor:"Master Elétrica", tags:["Industrial"], created_at:"2025-01-15T00:00:00Z", updated_at:"2025-01-15T00:00:00Z" },
 ];
 
 function fmtDate(iso: string | null) {
@@ -60,11 +60,10 @@ export default function BlogPage() {
   });
 
   useEffect(() => {
-    supabase.from("blog_posts").select("*").eq("publicado", true).order("publicado_em", { ascending: false })
-      .then(
-        ({ data }) => { setPosts(data && data.length > 0 ? (data as BlogPost[]) : STATIC_POSTS); setLoading(false); },
-        () => { setPosts(STATIC_POSTS); setLoading(false); }
-      );
+    // Carrega posts do localStorage em vez do Supabase
+    const localPosts = getPublicPosts();
+    setPosts(localPosts);
+    setLoading(false);
   }, []);
 
   const featured = posts[0];
